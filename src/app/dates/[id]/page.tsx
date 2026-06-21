@@ -160,13 +160,13 @@ export default function DateDetailPage({
           {photos.length > 0 ? (
             <div className="relative max-w-lg mx-auto">
               {/* Image */}
-              <div className="rounded-2xl overflow-hidden bg-gray-100">
+              <div className="rounded-2xl overflow-hidden bg-rose-50/80 flex items-center justify-center min-h-[260px]">
                 <img
                   src={photos[carouselIdx].imageUrl}
                   alt={
                     photos[carouselIdx].caption || `Photo ${carouselIdx + 1}`
                   }
-                  className="w-full aspect-[4/3] object-cover"
+                  className="max-w-full max-h-[65dvh] w-auto h-auto object-contain"
                 />
                 {photos[carouselIdx].caption && (
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 sm:p-4">
