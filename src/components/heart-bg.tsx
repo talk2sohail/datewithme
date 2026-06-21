@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Heart {
   id: number;
@@ -12,24 +12,30 @@ interface Heart {
 }
 
 function getHeartCount(): number {
-  if (typeof window === "undefined") return 15;
+  if (typeof window === "undefined") return 0;
   if (window.innerWidth < 640) return 10;
   if (window.innerWidth < 1024) return 15;
   return 20;
 }
 
 export default function HeartBackground() {
-  const [hearts] = useState<Heart[]>(() => {
-    const count = getHeartCount();
-    return Array.from({ length: count }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      size: Math.random() * 16 + 8,
-      delay: Math.random() * 5,
-      duration: Math.random() * 3 + 3,
-      opacity: Math.random() * 0.3 + 0.15,
-    }));
-  });
+  const [hearts, setHearts] = useState<Heart[]>([]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const count = getHeartCount();
+      const generated: Heart[] = Array.from({ length: count }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        size: Math.random() * 16 + 8,
+        delay: Math.random() * 5,
+        duration: Math.random() * 3 + 3,
+        opacity: Math.random() * 0.3 + 0.15,
+      }));
+      setHearts(generated);
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   return (
     <div

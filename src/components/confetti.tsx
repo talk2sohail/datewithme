@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ConfettiPiece {
   id: number;
@@ -12,33 +12,42 @@ interface ConfettiPiece {
 }
 
 function getConfettiCount(): number {
-  if (typeof window === "undefined") return 20;
+  if (typeof window === "undefined") return 0;
   if (window.innerWidth < 640) return 15;
   if (window.innerWidth < 1024) return 25;
   return 35;
 }
 
 export default function Confetti() {
-  const [pieces] = useState<ConfettiPiece[]>(() => {
-    const count = getConfettiCount();
-    const symbols = ["❤️", "💕", "✨", "🌸", "💖", "🎀", "💗", "🌹"];
-    const colors = [
-      "#e11d48",
-      "#fb7185",
-      "#f43f5e",
-      "#fda4af",
-      "#fbcfe8",
-      "#d946ef",
-    ];
-    return Array.from({ length: count }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      delay: Math.random() * 2,
-      rotation: Math.random() * 360,
-      symbol: symbols[Math.floor(Math.random() * symbols.length)],
-    }));
-  });
+  const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const count = getConfettiCount();
+      const symbols = ["❤️", "💕", "✨", "🌸", "💖", "🎀", "💗", "🌹"];
+      const colors = [
+        "#e11d48",
+        "#fb7185",
+        "#f43f5e",
+        "#fda4af",
+        "#fbcfe8",
+        "#d946ef",
+      ];
+      const generated: ConfettiPiece[] = Array.from(
+        { length: count },
+        (_, i) => ({
+          id: i,
+          x: Math.random() * 100,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          delay: Math.random() * 2,
+          rotation: Math.random() * 360,
+          symbol: symbols[Math.floor(Math.random() * symbols.length)],
+        }),
+      );
+      setPieces(generated);
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
 
   return (
     <div

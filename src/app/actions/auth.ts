@@ -34,6 +34,7 @@ export async function register(state: AuthState, formData: FormData) {
   }
 
   const { username, password } = validated.data;
+  const redirectTo = (formData.get("redirect") as string) || "/";
 
   try {
     const existing = await prisma.user.findUnique({ where: { username } });
@@ -51,7 +52,7 @@ export async function register(state: AuthState, formData: FormData) {
     return { message: "Something went wrong. Please try again." };
   }
 
-  redirect("/");
+  redirect(redirectTo);
 }
 
 export async function login(state: AuthState, formData: FormData) {
@@ -65,6 +66,7 @@ export async function login(state: AuthState, formData: FormData) {
   }
 
   const { username, password } = validated.data;
+  const redirectTo = (formData.get("redirect") as string) || "/";
 
   try {
     const user = await prisma.user.findUnique({ where: { username } });
@@ -82,7 +84,7 @@ export async function login(state: AuthState, formData: FormData) {
     return { message: "Something went wrong. Please try again." };
   }
 
-  redirect("/");
+  redirect(redirectTo);
 }
 
 export async function logout() {

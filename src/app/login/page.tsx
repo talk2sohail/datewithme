@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { login, type AuthState } from "@/app/actions/auth";
 import HeartBackground from "@/components/heart-bg";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/";
   const [state, action, pending] = useActionState<AuthState, FormData>(
     login,
     undefined,
@@ -29,6 +31,7 @@ export default function LoginPage() {
             </div>
 
             <form action={action} className="space-y-4">
+              <input type="hidden" name="redirect" value={redirectTo} />
               <div>
                 <label
                   htmlFor="username"
@@ -103,5 +106,13 @@ export default function LoginPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
