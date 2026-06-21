@@ -27,21 +27,23 @@ export default function HistoryPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchDates();
-  }, []);
-
-  async function fetchDates() {
-    try {
-      const res = await fetch("/api/dates");
-      if (res.ok) {
-        const data = await res.json();
-        setDates(data);
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/dates");
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          setDates(data);
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
+      if (!cancelled) setLoading(false);
     }
-    setLoading(false);
-  }
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);

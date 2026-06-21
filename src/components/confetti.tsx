@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface ConfettiPiece {
   id: number;
@@ -19,9 +19,7 @@ function getConfettiCount(): number {
 }
 
 export default function Confetti() {
-  const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
-
-  useEffect(() => {
+  const [pieces] = useState<ConfettiPiece[]>(() => {
     const count = getConfettiCount();
     const symbols = ["❤️", "💕", "✨", "🌸", "💖", "🎀", "💗", "🌹"];
     const colors = [
@@ -32,19 +30,15 @@ export default function Confetti() {
       "#fbcfe8",
       "#d946ef",
     ];
-    const generated: ConfettiPiece[] = Array.from(
-      { length: count },
-      (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        delay: Math.random() * 2,
-        rotation: Math.random() * 360,
-        symbol: symbols[Math.floor(Math.random() * symbols.length)],
-      }),
-    );
-    setPieces(generated);
-  }, []);
+    return Array.from({ length: count }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      delay: Math.random() * 2,
+      rotation: Math.random() * 360,
+      symbol: symbols[Math.floor(Math.random() * symbols.length)],
+    }));
+  });
 
   return (
     <div

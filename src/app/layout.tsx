@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { AuthProvider } from "@/components/auth-context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,7 +46,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable}`}
     >
       <body className="min-h-dvh flex flex-col antialiased overscroll-none">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

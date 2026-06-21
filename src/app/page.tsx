@@ -4,12 +4,47 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import HeartBackground from "@/components/heart-bg";
 import Confetti from "@/components/confetti";
+import { useAuth } from "@/components/auth-context";
+
+function AuthBar() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  if (loading) return null;
+
+  if (user) {
+    return (
+      <div className="absolute top-0 right-0 z-20 p-3 sm:p-4 flex items-center gap-2">
+        <span className="text-xs text-rose-400 font-medium">{user.username}</span>
+        <button
+          onClick={async () => {
+            const { logout } = await import("@/app/actions/auth");
+            logout();
+          }}
+          className="text-xs text-rose-400 hover:text-rose-600 underline underline-offset-2 transition-colors"
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="absolute top-0 right-0 z-20 p-3 sm:p-4">
+      <button
+        onClick={() => router.push("/login")}
+        className="text-xs text-rose-400 hover:text-rose-600 underline underline-offset-2 transition-colors"
+      >
+        Sign in
+      </button>
+    </div>
+  );
+}
 
 export default function Home() {
   const [response, setResponse] = useState<"yes" | "maybe" | null>(null);
   const [noCount, setNoCount] = useState(0);
   const [noButtonSize, setNoButtonSize] = useState(1);
-  const [showConfetti, setShowConfetti] = useState(false);
   const router = useRouter();
 
   const noMessages = [
@@ -56,7 +91,6 @@ export default function Home() {
 
   const handleYesClick = useCallback(() => {
     setResponse("yes");
-    setShowConfetti(true);
     setTimeout(() => {
       router.push("/choose");
     }, 2500);
@@ -65,11 +99,11 @@ export default function Home() {
   if (response === "yes") {
     return (
       <>
-        {showConfetti && <Confetti />}
+        <Confetti />
         <div className="relative z-10 flex flex-col items-center justify-center min-h-dvh safe-area-top safe-area-bottom px-5 sm:px-6 text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-rose-600 animate-fade-in-up">
-            Yay! 🎉💕
-          </h1>
+        <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold text-rose-600 animate-fade-in-up">
+          Yay! 🎉💕
+        </h1>
           <p className="mt-4 sm:mt-6 text-lg sm:text-xl md:text-2xl text-rose-500 animate-fade-in-up delay-200 max-w-xs sm:max-w-none">
             You just made me the happiest person! 🥰
           </p>
@@ -87,6 +121,7 @@ export default function Home() {
   return (
     <>
       <HeartBackground />
+      <AuthBar />
       <div className="relative z-10 flex flex-col items-center justify-center min-h-dvh safe-area-top safe-area-bottom px-5 sm:px-6">
         <div className="max-w-lg w-full text-center">
           <div className="text-5xl sm:text-6xl mb-4 sm:mb-6 animate-heartbeat select-none">

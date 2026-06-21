@@ -291,7 +291,7 @@ export default function CardPage({
               {/* Photo grid */}
               {photos.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                  {photos.map((photo, i) => (
+                  {photos.map((photo) => (
                     <div
                       key={photo.id}
                       className="bg-white/80 rounded-xl overflow-hidden border border-rose-200 shadow-sm"
