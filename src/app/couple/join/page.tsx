@@ -1,16 +1,36 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import HeartBackground from "@/components/heart-bg";
-import { joinCouple, type CoupleState } from "@/app/actions/couple";
 
 export default function JoinCouplePage() {
   const router = useRouter();
-  const [state, action, pending] = useActionState<CoupleState, FormData>(
-    joinCouple,
-    undefined,
-  );
+  const [code, setCode] = useState("");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setError("");
+
+    startTransition(async () => {
+      try {
+        const mod = await import("@/app/actions/couple");
+        const formData = new FormData();
+        formData.set("code", code);
+        const result = await mod.joinCouple(formData);
+        if (result.error) {
+          setError(result.error);
+        } else if (result.ok) {
+          router.push("/history");
+        }
+      } catch {
+        setError("Something went wrong. Try again.");
+      }
+    });
+  };
 
   return (
     <>
@@ -28,7 +48,7 @@ export default function JoinCouplePage() {
               </p>
             </div>
 
-            <form action={action} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label
                   htmlFor="code"
@@ -41,21 +61,21 @@ export default function JoinCouplePage() {
                   name="code"
                   type="text"
                   required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
                   placeholder="e.g. A1B2C3"
                   className="w-full px-4 py-3 rounded-xl border-2 border-rose-200 bg-white/70 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200 text-rose-700 placeholder-rose-300 text-base text-center uppercase tracking-widest font-bold min-h-[48px]"
                   autoComplete="off"
                 />
               </div>
 
-              {state?.message && (
-                <p className="text-sm text-rose-500 text-center">
-                  {state.message}
-                </p>
+              {error && (
+                <p className="text-sm text-rose-500 text-center">{error}</p>
               )}
 
               <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || !code.trim()}
                 className="w-full py-3.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 min-h-[52px] text-base select-none"
               >
                 {pending ? "Joining..." : "Join 💕"}

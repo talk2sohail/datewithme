@@ -24,17 +24,29 @@ interface DateRecord {
 export default function HistoryPage() {
   const [dates, setDates] = useState<DateRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [coupleInfo, setCoupleInfo] = useState<{
+    inviteCode: string;
+    partnerUsername?: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/dates");
+        const [datesRes, coupleRes] = await Promise.all([
+          fetch("/api/dates"),
+          fetch("/api/auth/couple"),
+        ]);
         if (cancelled) return;
-        if (res.ok) {
-          const data = await res.json();
+        if (datesRes.ok) {
+          const data = await datesRes.json();
           setDates(data);
+        }
+        if (coupleRes.ok) {
+          const data = await coupleRes.json();
+          setCoupleInfo(data);
         }
       } catch {
         // ignore
@@ -87,6 +99,34 @@ export default function HistoryPage() {
               Every beautiful memory we&apos;ve made together
             </p>
           </div>
+
+          {coupleInfo && (
+            <div className="mb-6 sm:mb-8 bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-rose-200 animate-fade-in-up flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg">💑</span>
+                <div className="min-w-0">
+                  <p className="text-xs text-rose-400 font-medium">
+                    Couple
+                  </p>
+                  <p className="text-sm text-rose-700 font-semibold truncate">
+                    {coupleInfo.partnerUsername
+                      ? `You & ${coupleInfo.partnerUsername}`
+                      : "Waiting for your partner to join"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(coupleInfo.inviteCode);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="shrink-0 px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-full text-xs font-medium transition-colors"
+              >
+                {copied ? "Copied!" : `Code: ${coupleInfo.inviteCode}`}
+              </button>
+            </div>
+          )}
 
           {dates.length === 0 ? (
             <div className="text-center py-16 animate-fade-in-up">

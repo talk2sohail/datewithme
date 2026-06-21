@@ -9,18 +9,16 @@ function generateInviteCode(): string {
   return crypto.randomBytes(3).toString("hex").toUpperCase();
 }
 
-export type CoupleState = {
-  message?: string;
+export async function createCouple(): Promise<{
   inviteCode?: string;
-} | undefined;
-
-export async function createCouple(
-  _state: CoupleState,
-  _formData: FormData,
-): Promise<CoupleState> {
+  error?: string;
+}> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  if (user.coupleId) redirect("/history");
+  if (!user) return { error: "Not authenticated" };
+  if (user.coupleId) {
+    await updateSessionCouple(user.coupleId);
+    redirect("/history");
+  }
 
   let inviteCode: string;
   let existing = true;
@@ -45,22 +43,50 @@ export async function createCouple(
   return { inviteCode: couple.inviteCode };
 }
 
-export async function joinCouple(state: CoupleState, formData: FormData) {
+export async function getCoupleInfo(): Promise<{
+  inviteCode?: string;
+  partnerUsername?: string;
+  error?: string;
+}> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  if (user.coupleId) redirect("/history");
+  if (!user || !user.coupleId) return { error: "Not in a couple" };
+
+  const couple = await prisma.couple.findUnique({
+    where: { id: user.coupleId },
+    include: {
+      users: {
+        select: { id: true, username: true },
+        where: { id: { not: user.id } },
+      },
+    },
+  });
+
+  if (!couple) return { error: "Couple not found" };
+
+  return {
+    inviteCode: couple.inviteCode,
+    partnerUsername: couple.users[0]?.username,
+  };
+}
+
+export async function joinCouple(formData: FormData): Promise<{
+  ok?: boolean;
+  error?: string;
+}> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+  if (user.coupleId) {
+    await updateSessionCouple(user.coupleId);
+    redirect("/history");
+  }
 
   const code = (formData.get("code") as string || "").trim().toUpperCase();
-  if (!code) {
-    return { message: "Please enter an invite code" };
-  }
+  if (!code) return { error: "Please enter an invite code" };
 
   const couple = await prisma.couple.findUnique({
     where: { inviteCode: code },
   });
-  if (!couple) {
-    return { message: "Invalid invite code. Check with your partner." };
-  }
+  if (!couple) return { error: "Invalid invite code" };
 
   await prisma.user.update({
     where: { id: user.id },
@@ -68,5 +94,6 @@ export async function joinCouple(state: CoupleState, formData: FormData) {
   });
 
   await updateSessionCouple(couple.id);
-  redirect("/history");
+
+  return { ok: true };
 }

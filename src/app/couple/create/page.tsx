@@ -1,19 +1,39 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import HeartBackground from "@/components/heart-bg";
-import { createCouple, type CoupleState } from "@/app/actions/couple";
 
 export default function CreateCouplePage() {
   const router = useRouter();
-  const [state, action, pending] = useActionState<CoupleState, FormData>(
-    createCouple,
-    undefined,
-  );
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState("");
 
-  if (state?.inviteCode) {
-    return <ShowCode inviteCode={state.inviteCode} />;
+  const handleCreate = () => {
+    setError("");
+    startTransition(async () => {
+      try {
+        const mod = await import("@/app/actions/couple");
+        const result = await mod.createCouple();
+        if (result.error) {
+          setError(result.error);
+        } else if (result.inviteCode) {
+          setInviteCode(result.inviteCode);
+        }
+      } catch {
+        setError("Something went wrong. Try again.");
+      }
+    });
+  };
+
+  if (inviteCode) {
+    return (
+      <ShowCode
+        inviteCode={inviteCode}
+        onContinue={() => router.push("/history")}
+      />
+    );
   }
 
   return (
@@ -31,15 +51,17 @@ export default function CreateCouplePage() {
               partner so you can share your date memories together.
             </p>
 
-            <form action={action}>
-              <button
-                type="submit"
-                disabled={pending}
-                className="w-full py-3.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 transition-all duration-200 min-h-[52px] text-base select-none"
-              >
-                {pending ? "Creating..." : "Create Our Couple 💕"}
-              </button>
-            </form>
+            <button
+              onClick={handleCreate}
+              disabled={pending}
+              className="w-full py-3.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 transition-all duration-200 min-h-[52px] text-base select-none"
+            >
+              {pending ? "Creating..." : "Create Our Couple 💕"}
+            </button>
+
+            {error && (
+              <p className="mt-3 text-sm text-rose-500">{error}</p>
+            )}
 
             <p className="mt-5 text-sm text-rose-400">
               Your partner already has an account?{" "}
@@ -57,11 +79,19 @@ export default function CreateCouplePage() {
   );
 }
 
-function ShowCode({ inviteCode }: { inviteCode: string }) {
-  const router = useRouter();
+function ShowCode({
+  inviteCode,
+  onContinue,
+}: {
+  inviteCode: string;
+  onContinue: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
 
   const copy = () => {
     navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -84,7 +114,7 @@ function ShowCode({ inviteCode }: { inviteCode: string }) {
               className="cursor-pointer select-all inline-block px-8 py-4 bg-rose-50 border-2 border-dashed border-rose-300 rounded-2xl mb-4"
             >
               <p className="text-xs text-rose-400 mb-1 font-medium">
-                Invite Code — tap to copy
+                {copied ? "Copied! ✅" : "Invite Code — tap to copy"}
               </p>
               <p className="text-3xl font-bold text-rose-600 tracking-[0.25em]">
                 {inviteCode}
@@ -92,7 +122,7 @@ function ShowCode({ inviteCode }: { inviteCode: string }) {
             </div>
 
             <button
-              onClick={() => router.push("/history")}
+              onClick={onContinue}
               className="w-full py-3.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 min-h-[52px] text-base select-none"
             >
               Start Planning Dates 💕
