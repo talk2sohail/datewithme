@@ -14,7 +14,10 @@ export type CoupleState = {
   inviteCode?: string;
 } | undefined;
 
-export async function createCouple() {
+export async function createCouple(
+  _state: CoupleState,
+  _formData: FormData,
+): Promise<CoupleState> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (user.coupleId) redirect("/history");
@@ -38,7 +41,8 @@ export async function createCouple() {
   });
 
   await updateSessionCouple(couple.id);
-  redirect("/history");
+
+  return { inviteCode: couple.inviteCode };
 }
 
 export async function joinCouple(state: CoupleState, formData: FormData) {
