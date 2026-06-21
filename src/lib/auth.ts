@@ -15,6 +15,7 @@ function getEncodedKey() {
 export interface SessionPayload {
   userId: string;
   username: string;
+  coupleId: string | null;
   expiresAt: Date;
 }
 
@@ -37,9 +38,9 @@ export async function decrypt(session: string | undefined = "") {
   }
 }
 
-export async function createSession(userId: string, username: string) {
+export async function createSession(userId: string, username: string, coupleId: string | null = null) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const session = await encrypt({ userId, username, expiresAt });
+  const session = await encrypt({ userId, username, coupleId, expiresAt });
   const cookieStore = await cookies();
   cookieStore.set("session", session, {
     httpOnly: true,
@@ -48,6 +49,12 @@ export async function createSession(userId: string, username: string) {
     sameSite: "lax",
     path: "/",
   });
+}
+
+export async function updateSessionCouple(coupleId: string) {
+  const session = await verifySession();
+  if (!session) return;
+  await createSession(session.userId, session.username, coupleId);
 }
 
 export async function deleteSession() {
@@ -74,7 +81,7 @@ export async function getCurrentUser() {
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, username: true },
+    select: { id: true, username: true, coupleId: true },
   });
   return user;
 }
@@ -85,4 +92,12 @@ export async function requireAuth() {
     throw new Error("Unauthorized");
   }
   return user;
+}
+
+export async function requireCouple() {
+  const user = await requireAuth();
+  if (!user.coupleId) {
+    throw new Error("No couple");
+  }
+  return user as typeof user & { coupleId: string };
 }

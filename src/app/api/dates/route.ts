@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireCouple } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireCouple();
     const body = await request.json();
     const { places, foods, dateTime } = body;
 
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
 
     const date = await prisma.date.create({
       data: {
+        coupleId: user.coupleId,
         places: Array.isArray(places) ? places : [places],
         foods: Array.isArray(foods) ? foods : [foods],
         dateTime: new Date(dateTime),
@@ -35,13 +36,13 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireCouple();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
     if (id) {
-      const date = await prisma.date.findUnique({
-        where: { id },
+      const date = await prisma.date.findFirst({
+        where: { id, coupleId: user.coupleId },
         include: { photos: { orderBy: { createdAt: "desc" } } },
       });
       if (!date) {
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     const dates = await prisma.date.findMany({
+      where: { coupleId: user.coupleId },
       orderBy: { dateTime: "desc" },
       include: {
         photos: {

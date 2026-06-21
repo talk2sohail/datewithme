@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireCouple } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireCouple();
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const caption = (formData.get("caption") as string) || "";
@@ -17,11 +17,13 @@ export async function POST(request: NextRequest) {
     let finalDateId = dateId;
     if (!finalDateId) {
       const latestDate = await prisma.date.findFirst({
+        where: { coupleId: user.coupleId },
         orderBy: { dateTime: "desc" },
       });
       if (!latestDate) {
         const placeholder = await prisma.date.create({
           data: {
+            coupleId: user.coupleId,
             places: ["Our Special Day"],
             foods: ["Delicious Food"],
             dateTime: new Date(),
@@ -55,12 +57,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth();
+    const user = await requireCouple();
     const { searchParams } = new URL(request.url);
     const dateId = searchParams.get("dateId");
 
     const photos = await prisma.photo.findMany({
-      where: dateId ? { dateId } : {},
+      where: {
+        date: { coupleId: user.coupleId },
+        ...(dateId ? { dateId } : {}),
+      },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {

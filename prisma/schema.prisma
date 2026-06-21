@@ -7,10 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Couple {
+  id         String   @id @default(cuid())
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users User[]
+  dates Date[]
+
+  @@map("couples")
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
   passwordHash String
+  coupleId     String?
+  couple       Couple?  @relation(fields: [coupleId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -33,9 +47,12 @@ model Date {
   notes     String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  coupleId  String?
+  couple    Couple?    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
 
   photos Photo[]
 
+  @@index([coupleId])
   @@index([dateTime(sort: Desc)])
   @@map("dates")
 }
