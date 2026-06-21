@@ -97,3 +97,29 @@ export async function joinCouple(formData: FormData): Promise<{
 
   return { ok: true };
 }
+
+export async function resetCouple(): Promise<{
+  ok?: boolean;
+  error?: string;
+}> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "Not authenticated" };
+  if (!user.coupleId) return { error: "Not in a couple" };
+
+  const couple = await prisma.couple.findUnique({
+    where: { id: user.coupleId },
+    include: { users: { select: { id: true } } },
+  });
+  if (!couple) return { error: "Couple not found" };
+  if (couple.users.length > 1) {
+    return {
+      error: "Cannot reset — your partner has already joined. They must leave first.",
+    };
+  }
+
+  await prisma.couple.delete({ where: { id: user.coupleId } });
+
+  await updateSessionCouple(null);
+
+  return { ok: true };
+}

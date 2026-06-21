@@ -51,7 +51,7 @@ export async function createSession(userId: string, username: string, coupleId: 
   });
 }
 
-export async function updateSessionCouple(coupleId: string) {
+export async function updateSessionCouple(coupleId: string | null) {
   const session = await verifySession();
   if (!session) return;
   await createSession(session.userId, session.username, coupleId);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import HeartBackground from "@/components/heart-bg";
 import {
@@ -29,7 +29,23 @@ export default function HistoryPage() {
     partnerUsername?: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [resetPending, startResetTransition] = useTransition();
   const router = useRouter();
+
+  const handleReset = () => {
+    if (resetPending) return;
+    startResetTransition(async () => {
+      try {
+        const mod = await import("@/app/actions/couple");
+        const result = await mod.resetCouple();
+        if (result.ok) {
+          router.push("/couple/create");
+        }
+      } catch {
+        // ignore
+      }
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -101,30 +117,41 @@ export default function HistoryPage() {
           </div>
 
           {coupleInfo && (
-            <div className="mb-6 sm:mb-8 bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-rose-200 animate-fade-in-up flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-lg">💑</span>
-                <div className="min-w-0">
-                  <p className="text-xs text-rose-400 font-medium">
-                    Couple
-                  </p>
-                  <p className="text-sm text-rose-700 font-semibold truncate">
-                    {coupleInfo.partnerUsername
-                      ? `You & ${coupleInfo.partnerUsername}`
-                      : "Waiting for your partner to join"}
-                  </p>
+            <div className="mb-6 sm:mb-8 bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-rose-200 animate-fade-in-up">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-lg">💑</span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-rose-400 font-medium">
+                      Couple
+                    </p>
+                    <p className="text-sm text-rose-700 font-semibold truncate">
+                      {coupleInfo.partnerUsername
+                        ? `You & ${coupleInfo.partnerUsername}`
+                        : "Waiting for your partner to join"}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(coupleInfo.inviteCode);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="shrink-0 px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-full text-xs font-medium transition-colors"
+                >
+                  {copied ? "Copied!" : `Code: ${coupleInfo.inviteCode}`}
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(coupleInfo.inviteCode);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                className="shrink-0 px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-full text-xs font-medium transition-colors"
-              >
-                {copied ? "Copied!" : `Code: ${coupleInfo.inviteCode}`}
-              </button>
+              {!coupleInfo.partnerUsername && (
+                <button
+                  onClick={handleReset}
+                  disabled={resetPending}
+                  className="mt-2 w-full py-2 text-xs text-rose-400 hover:text-rose-600 underline underline-offset-2 transition-colors disabled:opacity-50"
+                >
+                  {resetPending ? "Resetting..." : "Wrong code? Reset and start over"}
+                </button>
+              )}
             </div>
           )}
 
