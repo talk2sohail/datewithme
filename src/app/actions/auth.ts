@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSession, deleteSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { logInfo, logWarn } from "@/lib/logger";
 
 const AuthSchema = z.object({
   username: z
@@ -39,6 +40,7 @@ export async function register(state: AuthState, formData: FormData) {
   try {
     const existing = await prisma.user.findUnique({ where: { username } });
     if (existing) {
+      logWarn("auth.register.fail", `username taken: ${username}`, { username });
       return { errors: { username: ["Username already taken"] } };
     }
 
@@ -48,7 +50,9 @@ export async function register(state: AuthState, formData: FormData) {
     });
 
     await createSession(user.id, user.username);
+    logInfo("auth.register", `user registered: ${username}`, { userId: user.id, username });
   } catch {
+    logWarn("auth.register.fail", `registration failed for: ${username}`, { username });
     return { message: "Something went wrong. Please try again." };
   }
 
@@ -71,16 +75,20 @@ export async function login(state: AuthState, formData: FormData) {
   try {
     const user = await prisma.user.findUnique({ where: { username } });
     if (!user) {
+      logWarn("auth.login.fail", `user not found: ${username}`, { username });
       return { message: "Invalid username or password" };
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      logWarn("auth.login.fail", `wrong password for: ${username}`, { username });
       return { message: "Invalid username or password" };
     }
 
     await createSession(user.id, user.username, user.coupleId);
+    logInfo("auth.login", `user logged in: ${username}`, { userId: user.id, username, coupleId: user.coupleId });
   } catch {
+    logWarn("auth.login.fail", `login error for: ${username}`, { username });
     return { message: "Something went wrong. Please try again." };
   }
 
@@ -88,6 +96,7 @@ export async function login(state: AuthState, formData: FormData) {
 }
 
 export async function logout() {
+  logInfo("auth.logout", "user logged out", {});
   await deleteSession();
   redirect("/login");
 }

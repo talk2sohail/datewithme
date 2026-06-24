@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser, updateSessionCouple } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import crypto from "crypto";
+import { logInfo, logWarn } from "@/lib/logger";
 
 function generateInviteCode(): string {
   return crypto.randomBytes(8).toString("hex").toUpperCase();
@@ -39,6 +40,10 @@ export async function createCouple(): Promise<{
   });
 
   await updateSessionCouple(couple.id);
+
+  logInfo("couple.create", `couple created by ${user.username}`, {
+    userId: user.id, username: user.username, coupleId: couple.id, inviteCode: couple.inviteCode,
+  });
 
   return { inviteCode: couple.inviteCode };
 }
@@ -87,8 +92,16 @@ export async function joinCouple(formData: FormData): Promise<{
     where: { inviteCode: code },
     include: { users: { select: { id: true } } },
   });
-  if (!couple) return { error: "Invalid invite code" };
+  if (!couple) {
+    logWarn("couple.join.fail", `${user.username} tried invalid code`, {
+      userId: user.id, username: user.username, attemptedCode: code,
+    });
+    return { error: "Invalid invite code" };
+  }
   if (couple.users.length >= 2) {
+    logWarn("couple.join.fail", `${user.username} tried full couple ${couple.id}`, {
+      userId: user.id, username: user.username, coupleId: couple.id,
+    });
     return { error: "This couple already has two partners" };
   }
 
@@ -111,6 +124,10 @@ export async function joinCouple(formData: FormData): Promise<{
 
   await updateSessionCouple(couple.id);
 
+  logInfo("couple.join", `${user.username} joined couple ${couple.id}`, {
+    userId: user.id, username: user.username, coupleId: couple.id,
+  });
+
   return { ok: true };
 }
 
@@ -128,6 +145,9 @@ export async function resetCouple(): Promise<{
   });
   if (!couple) return { error: "Couple not found" };
   if (couple.users.length > 1) {
+    logWarn("couple.reset.fail", `${user.username} tried to reset full couple ${user.coupleId}`, {
+      userId: user.id, username: user.username, coupleId: user.coupleId,
+    });
     return {
       error: "Cannot reset — your partner has already joined. They must leave first.",
     };
@@ -141,6 +161,10 @@ export async function resetCouple(): Promise<{
   });
 
   await updateSessionCouple(null);
+
+  logInfo("couple.reset", `${user.username} reset couple ${user.coupleId}`, {
+    userId: user.id, username: user.username, coupleId: user.coupleId,
+  });
 
   return { ok: true };
 }

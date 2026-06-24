@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCouple } from "@/lib/auth";
 import { uploadPhoto } from "@/lib/storage";
+import { logInfo, logWarn, logError } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
+  let user: Awaited<ReturnType<typeof requireCouple>> | undefined;
   try {
-    const user = await requireCouple();
+    user = await requireCouple();
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const caption = (formData.get("caption") as string) || "";
     const dateId = formData.get("dateId") as string | null;
 
     if (!file) {
+      logWarn("photo.upload", "no file provided", {
+        userId: user.id, username: user.username, coupleId: user.coupleId,
+      });
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
@@ -31,6 +36,9 @@ export async function POST(request: NextRequest) {
           },
         });
         finalDateId = placeholder.id;
+        logInfo("photo.upload", `placeholder date ${placeholder.id} created for photo`, {
+          userId: user.id, username: user.username, coupleId: user.coupleId, dateId: placeholder.id,
+        });
       } else {
         finalDateId = latestDate.id;
       }
@@ -39,11 +47,21 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const mimeType = file.type || "image/jpeg";
+    const fileSizeKb = Math.round(buffer.length / 1024);
+
+    logInfo("photo.upload", `uploading ${fileSizeKb}KB ${mimeType} to date ${finalDateId}`, {
+      userId: user.id, username: user.username, coupleId: user.coupleId,
+      dateId: finalDateId, fileSizeKb, mimeType,
+    });
 
     let imageUrl: string;
     try {
       imageUrl = await uploadPhoto(buffer, mimeType);
-    } catch {
+    } catch (err) {
+      logError("photo.upload", `SeaweedFS upload failed for ${user.username}`, {
+        userId: user.id, username: user.username, coupleId: user.coupleId,
+        dateId: finalDateId, fileSizeKb, error: String(err),
+      });
       return NextResponse.json(
         { error: "Failed to upload photo to storage" },
         { status: 500 },
@@ -54,9 +72,16 @@ export async function POST(request: NextRequest) {
       data: { dateId: finalDateId, imageUrl, caption: caption || null },
     });
 
+    logInfo("photo.upload", `photo ${photo.id} uploaded by ${user.username}`, {
+      userId: user.id, username: user.username, coupleId: user.coupleId,
+      dateId: finalDateId, photoId: photo.id, imageUrl,
+    });
+
     return NextResponse.json(photo, { status: 201 });
   } catch (error) {
-    console.error("Error uploading photo:", error);
+    logError("photo.upload", `upload failed for ${user?.username}`, {
+      userId: user?.id, username: user?.username, coupleId: user?.coupleId, error: String(error),
+    });
     return NextResponse.json(
       { error: "Failed to upload photo" },
       { status: 500 },
@@ -65,8 +90,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  let user: Awaited<ReturnType<typeof requireCouple>> | undefined;
   try {
-    const user = await requireCouple();
+    user = await requireCouple();
     const { searchParams } = new URL(request.url);
     const dateId = searchParams.get("dateId");
 
@@ -83,9 +109,16 @@ export async function GET(request: NextRequest) {
         },
       },
     });
+
+    logInfo("photo.list", `${user.username} listed ${photos.length} photos`, {
+      userId: user.id, username: user.username, coupleId: user.coupleId, count: photos.length, dateId: dateId || undefined,
+    });
+
     return NextResponse.json(photos);
   } catch (error) {
-    console.error("Error fetching photos:", error);
+    logError("photo.list", `list failed for ${user?.username}`, {
+      userId: user?.id, username: user?.username, coupleId: user?.coupleId, error: String(error),
+    });
     return NextResponse.json(
       { error: "Failed to fetch photos" },
       { status: 500 },
