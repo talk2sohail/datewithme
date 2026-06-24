@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCouple } from "@/lib/auth";
+import { uploadPhoto } from "@/lib/storage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,9 +38,17 @@ export async function POST(request: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const base64 = buffer.toString("base64");
     const mimeType = file.type || "image/jpeg";
-    const imageUrl = `data:${mimeType};base64,${base64}`;
+
+    let imageUrl: string;
+    try {
+      imageUrl = await uploadPhoto(buffer, mimeType);
+    } catch {
+      return NextResponse.json(
+        { error: "Failed to upload photo to storage" },
+        { status: 500 },
+      );
+    }
 
     const photo = await prisma.photo.create({
       data: { dateId: finalDateId, imageUrl, caption: caption || null },
