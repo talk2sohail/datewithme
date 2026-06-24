@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import crypto from "crypto";
 
 function generateInviteCode(): string {
-  return crypto.randomBytes(3).toString("hex").toUpperCase();
+  return crypto.randomBytes(8).toString("hex").toUpperCase();
 }
 
 export async function createCouple(): Promise<{
@@ -85,8 +85,12 @@ export async function joinCouple(formData: FormData): Promise<{
 
   const couple = await prisma.couple.findUnique({
     where: { inviteCode: code },
+    include: { users: { select: { id: true } } },
   });
   if (!couple) return { error: "Invalid invite code" };
+  if (couple.users.length >= 2) {
+    return { error: "This couple already has two partners" };
+  }
 
   await prisma.user.update({
     where: { id: user.id },
@@ -118,6 +122,11 @@ export async function resetCouple(): Promise<{
   }
 
   await prisma.couple.delete({ where: { id: user.coupleId } });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { coupleId: null },
+  });
 
   await updateSessionCouple(null);
 

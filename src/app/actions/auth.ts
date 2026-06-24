@@ -79,7 +79,7 @@ export async function login(state: AuthState, formData: FormData) {
       return { message: "Invalid username or password" };
     }
 
-    await createSession(user.id, user.username);
+    await createSession(user.id, user.username, user.coupleId);
   } catch {
     return { message: "Something went wrong. Please try again." };
   }
