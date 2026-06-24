@@ -3,10 +3,12 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { Agent as HttpsAgent } from "https";
+import { Agent as HttpAgent } from "http";
 import crypto from "crypto";
 import { logError, logInfo } from "./logger";
 
 const s3Endpoint = process.env.S3_ENDPOINT;
+const s3PublicUrl = process.env.S3_PUBLIC_URL || s3Endpoint;
 const s3AccessKey = process.env.S3_ACCESS_KEY;
 const s3SecretKey = process.env.S3_SECRET_KEY;
 const s3Bucket = process.env.S3_BUCKET;
@@ -15,6 +17,7 @@ function getClient() {
   if (!s3Endpoint || !s3AccessKey || !s3SecretKey || !s3Bucket) {
     throw new Error("S3 storage not configured");
   }
+
   return {
     client: new S3Client({
       endpoint: s3Endpoint,
@@ -22,7 +25,10 @@ function getClient() {
       credentials: { accessKeyId: s3AccessKey, secretAccessKey: s3SecretKey },
       forcePathStyle: true,
       requestHandler: new NodeHttpHandler({
+        requestTimeout: 15_000,
+        connectionTimeout: 5_000,
         httpsAgent: new HttpsAgent({ rejectUnauthorized: false }),
+        httpAgent: new HttpAgent(),
       }),
     }),
     bucket: s3Bucket,
@@ -39,6 +45,8 @@ export async function uploadPhoto(
   try {
     const { client, bucket } = getClient();
 
+    logInfo("photo.upload", `uploading to ${s3Endpoint}/${bucket}/${key}`, { key });
+
     const upload = new Upload({
       client,
       params: {
@@ -52,8 +60,8 @@ export async function uploadPhoto(
 
     await upload.done();
 
-    const url = `${s3Endpoint}/${bucket}/${key}`;
-    logInfo("photo.upload", `uploaded to SeaweedFS: ${key}`, { key, url });
+    const url = `${s3PublicUrl}/${bucket}/${key}`;
+    logInfo("photo.upload", `uploaded to SeaweedFS: ${url}`, { key, url });
     return url;
   } catch (err) {
     logError("photo.upload", `SeaweedFS upload failed, falling back to base64`, {
