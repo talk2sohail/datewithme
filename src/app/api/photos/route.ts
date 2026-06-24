@@ -54,19 +54,7 @@ export async function POST(request: NextRequest) {
       dateId: finalDateId, fileSizeKb, mimeType,
     });
 
-    let imageUrl: string;
-    try {
-      imageUrl = await uploadPhoto(buffer, mimeType);
-    } catch (err) {
-      logError("photo.upload", `SeaweedFS upload failed for ${user.username}`, {
-        userId: user.id, username: user.username, coupleId: user.coupleId,
-        dateId: finalDateId, fileSizeKb, error: String(err),
-      });
-      return NextResponse.json(
-        { error: "Failed to upload photo to storage" },
-        { status: 500 },
-      );
-    }
+    const imageUrl = await uploadPhoto(buffer, mimeType);
 
     const photo = await prisma.photo.create({
       data: { dateId: finalDateId, imageUrl, caption: caption || null },
