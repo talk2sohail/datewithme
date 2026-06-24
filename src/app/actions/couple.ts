@@ -97,6 +97,18 @@ export async function joinCouple(formData: FormData): Promise<{
     data: { coupleId: couple.id },
   });
 
+  const updatedCouple = await prisma.couple.findUnique({
+    where: { id: couple.id },
+    include: { users: { select: { id: true } } },
+  });
+
+  if (updatedCouple && updatedCouple.users.length >= 2) {
+    await prisma.couple.update({
+      where: { id: couple.id },
+      data: { inviteCode: `USED_${couple.id}` },
+    });
+  }
+
   await updateSessionCouple(couple.id);
 
   return { ok: true };
